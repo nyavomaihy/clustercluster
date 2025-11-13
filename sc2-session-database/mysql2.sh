@@ -1,0 +1,1 @@
+sudo mysql -u root -S /var/run/mysqld/mysqld2.sock

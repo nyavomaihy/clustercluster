@@ -1,0 +1,166 @@
+Etape 1 - Installation de MariaDB
+    sudo apt update
+    sudo apt install mariadb-server -y
+    sudo apt remove mariadb-server -y
+
+lancement
+    sudo service mariadb enable 
+    sudo service  mariadb start
+    sudo mysql_secure_installation
+
+Etape 2 - Configuration du premier serveur (Master1)
+        sudo nano /etc/mysql/mariadb.conf.d/50-server.cnf
+        [mysqld]
+        server-id=1
+        log-bin=mysql-bin
+        binlog_format=mixed
+
+    Redemarre le serveur
+        sudo systemctl restart mariadb
+
+    Connecter à MariaDB
+        sudo mysql -u root -p
+
+    Crée un utilisateur de réplication
+        CREATE USER 'repl'@'%' IDENTIFIED BY 'password';
+        GRANT REPLICATION SLAVE ON *.* TO 'repl'@'%';
+        FLUSH PRIVILEGES;
+
+    Vérification de l'état du Master1
+        FLUSH TABLES WITH READ LOCK;
+        SHOW MASTER STATUS;
+        +------------------+----------+--------------+------------------+-------------------+
+        | File             | Position | Binlog_Do_DB | Binlog_Ignore_DB | Executed_Gtid_Set |
+        +------------------+----------+--------------+------------------+-------------------+
+        | mysql-bin.000001 |      154 |              |                  |                   |
+        +------------------+----------+--------------+------------------+-------------------+
+
+
+Etape 3 - Configurer le deuxième serveur (Master2)
+    sudo nano /etc/mysql/mariadb.conf.d/50-server.cnf
+        [mysqld]
+        server-id=2
+        log-bin=mysql-bin
+        binlog_format=mixed
+
+        sauvegarde et redémarre
+            sudo systemctl restart mariadb
+
+        connecter à MariaDB
+            sudo mysql -u root -p
+
+        Crée l'utilisateur de réplication
+            CREATE USER 'repl'@'%' IDENTIFIED BY 'password';
+            GRANT REPLICATION SLAVE ON *.* TO 'repl'@'%';
+            FLUSH PRIVILEGES;
+
+
+        Cshow onnecte le serveur 2 au serveur 1
+            CHANGE MASTER TO
+            MASTER_HOST='127.0.0.1',
+            MASTER_USER='repl',
+            MASTER_PASSWORD='password',
+            MASTER_PORT=3307,
+            MASTER_LOG_FILE='mysql-bin.000001',
+            MASTER_LOG_POS=2324;
+
+        démarre la réplication
+            START SLAVE;
+
+        vérifie:
+            SHOW SLAVE STATUS\G
+
+        tu dois voir: 
+            Slave_IO_Running: Yes
+            Slave_SQL_Running: Yes
+
+
+Etape 4 - Configurer la réplication inverse (serveur 1 ↔ serveur 2)
+    sur le serveur 2 : 
+        SHOW MASTER STATUS;
+        Note les valeurs File et Position
+
+    reviens sur le serveur 1 et exécute
+        CHANGE MASTER TO
+        MASTER_HOST='127.0.0.1',
+        MASTER_USER='repl',
+        MASTER_PASSWORD='password',
+        MASTER_PORT=3306,
+        MASTER_LOG_FILE='mysql-bin.000002',
+        MASTER_LOG_POS=342;
+
+        START SLAVE;
+
+    vérifie : 
+        SHOW SLAVE STATUS\G
+
+
+Etape 5 - Test final
+Sur l'un des deux serveurs, crée une base et une table:
+    CREATE DATABASE testdb;
+    USE testdb;
+    CREATE TABLE users(id INT PRIMARY KEY AUTO_INCREMENT, name VARCHAR(50));
+    INSERT INTO users(name) VALUES('Randy');
+
+vas sur l'autre serveur et fais:
+    SELECT * FROM testdb.users;
+
+
+
+pour crée le SERVEUR2
+    sudo mkdir -p /var/lib/mysql2
+    sudo chown -R mysql:mysql /var/lib/mysql2
+
+    créer un fichier de config pour le serveur 2
+    sudo touch /etc/mysql/mariadb.conf.d/50-server-2.cnf
+    sudo nano /etc/mysql/mariadb.conf.d/50-server-2.cnf
+        [mysqld]
+        server-id=2
+        log-bin=mysql-bin
+        binlog_format=mixed
+
+        # Nouveau port pour le serveur 2
+        port=3307
+
+        # Nouveau chemin pour les données
+        datadir=/var/lib/mysql2
+
+        # Autres paramètres InnoDB
+        innodb_buffer_pool_size=1G
+        socket=/var/run/mysqld/mysqld2.sock
+        pid-file=/var/run/mysqld/mysqld2.pid
+
+
+    initialisation du Nouveau datadir
+        sudo mariadb-install-db --user=mysql --datadir=/var/lib/mysql2
+sudo mysql_install_db --user=mysql --datadir=/var/lib/mysql2
+  
+    lancement du serveur 2 :
+        sudo mysqld_safe --defaults-file=/etc/mysql/mariadb.conf.d/50-server-2.cnf &
+        sudo mysqld_safe --defaults-file=/etc/mysql/mariadb.conf.d/50-server.cnf &
+
+
+skip error
+SET GLOBAL SQL_SLAVE_SKIP_COUNTER = 1;
+
+CREATE USER 'repl'@'localhost' IDENTIFIED BY 'password';
+GRANT REPLICATION SLAVE ON *.* TO 'repl'@'localhost';
+
+-- Option C : Pour connexions depuis 127.0.0.1 seulement
+CREATE USER 'repl'@'127.0.0.1' IDENTIFIED BY 'password';
+GRANT REPLICATION SLAVE ON *.* TO 'repl'@'127.0.0.1';
+
+
+
+
+
+
+
+CREATE USER IF NOT EXISTS 'webuser'@'%' IDENTIFIED BY 'password';
+CREATE USER IF NOT EXISTS 'webuser'@'localhost' IDENTIFIED BY 'password';
+CREATE USER IF NOT EXISTS 'webuser'@'127.0.0.1' IDENTIFIED BY 'password';
+
+-- Donner tous les privilèges sur la base
+GRANT ALL PRIVILEGES ON session_cluster.* TO 'webuser'@'%';
+GRANT ALL PRIVILEGES ON session_cluster.* TO 'webuser'@'localhost';
+GRANT ALL PRIVILEGES ON session_cluster.* TO 'webuser'@'127.0.0.1';

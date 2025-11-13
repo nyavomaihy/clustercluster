@@ -1,0 +1,49 @@
+1 - approche fonctionnel
+2 - Virement bancaire
+    Ahoana ny pozin'ny affichage
+        compte, montant, notion de rique, date
+        boutton : valider, annuler
+        système de validation betsaka
+        vita ny virement de misy validation de virement
+        fonction : virer(compte, montant, notion de rique, date) ao am classe Compte
+        tsy atao argument ny compte rehetra
+        
+fonction metier : 
+    - controle 
+        - controle unitaire : controle simple ( tao anaty setters ) ex virement negatif, raha null de atao date du jour, ny devise raha null dia atao MGA
+        - controle complexe : controle de composition maromaro
+        - compte ve m'existe
+    - metier : 
+    - persistence : soit update soit insert
+    objet Virement satria Virement iray no validena na annulena
+Raha te hanao Service de atao ambony Objet
+Change tsy azo atao anaty singleton satria miova isan'andro
+
+objectif conception : 
+    Compte(){
+        fonction  Virement virer()
+        fonction maka getListVirementDuJour(){
+            tsy azo atao ny manao virement mihoatra ny X-Ar
+        }
+    }
+    Virement(){
+        tsy azo atao ny mvalidé in-droa(tsy any am affichage, satria azo inspectena raha oe fafana ny boutton rehefa mvalide)
+        controle oe efa validé sa tsia ilay virement, 
+        fonction valider(){
+        }
+        fonction annulerValidation(){
+            tsy azo ataon ny m'annule indroa
+        }
+    }
+    VirementComplet extends Virement{
+        apetraka ao ny momba ny Virement, ny mpandefa vola sy mpandray
+    }
+    Change(){
+        saisirChange()
+        validerChange()
+        modifierChange()
+    }
+    aza adino ny Transaction 
+    scenario virement
+
+    Persistence : enrgesitrer base

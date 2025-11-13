@@ -1,0 +1,11 @@
+service haproxy status
+sudo service haproxy start
+sudo service haproxy stop
+sudo service haproxy restart
+
+lancement mysql
+sudo service mysql enable
+sudo service mysql start
+sudo service mysql restart
+sudo service mysql status
+sudo mysql_secure_installation
